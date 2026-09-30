@@ -1,6 +1,11 @@
-import { pool } from "@/lib/db";
+import { pool, urlLectura } from "@/lib/db";
 import { aVector, embeddings } from "@/lib/embeddings";
-import { ejecutarSQL, planificar, type ResultadoSQL } from "@/lib/consulta-sql";
+import {
+  ejecutarSQL,
+  planificar,
+  type Plan,
+  type ResultadoSQL,
+} from "@/lib/consulta-sql";
 import { completar, type MensajeModelo } from "@/lib/openrouter";
 
 // Fragmentos que se recuperan por pregunta; luego se agrupan por documento
@@ -244,8 +249,12 @@ export async function responder(mensajes: Mensaje[]): Promise<RespuestaChat> {
     .map((m) => ({ role: m.rol === "usuario" ? "user" : "assistant", content: m.texto }));
 
   // Cálculos y totales: SQL sobre las tablas. Se reintenta una vez corrigiendo
-  // el error; si vuelve a fallar se responde con la búsqueda semántica.
-  let plan = await planificar(historial, pregunta);
+  // el error; si vuelve a fallar se responde con la búsqueda semántica. Sin
+  // usuario de solo lectura (p. ej. servidores que no permiten crear roles) no
+  // se intenta: el SQL generado nunca se ejecuta con el usuario principal.
+  let plan: Plan = urlLectura()
+    ? await planificar(historial, pregunta)
+    : { modo: "semantica" };
   for (let intento = 0; plan.modo === "sql" && intento < 2; intento++) {
     let resultado: ResultadoSQL;
     try {

@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const query = vi.fn();
-vi.mock("@/lib/db", () => ({ pool: { query } }));
+const urlLectura = vi.fn();
+vi.mock("@/lib/db", () => ({ pool: { query }, urlLectura }));
 const planificar = vi.fn();
 const ejecutarSQL = vi.fn();
 vi.mock("@/lib/consulta-sql", () => ({ planificar, ejecutarSQL }));
@@ -45,6 +46,7 @@ beforeEach(() => {
   globalThis.fetch = vi.fn();
   vi.spyOn(console, "error").mockImplementation(() => {});
   planificar.mockResolvedValue({ modo: "semantica" });
+  urlLectura.mockReturnValue("postgres://lector:x@host/db");
   embeddings.mockResolvedValue([new Array(1024).fill(0.1)]);
   query.mockResolvedValue({
     rows: [
@@ -274,6 +276,18 @@ describe("preguntas de cálculo con SQL", () => {
     expect(r.modo).toBe("sql");
     expect(r.fuentes).toEqual([]);
     expect(cuerpoEnviado().messages.at(-1).content).toContain("no cites ninguno");
+  });
+
+  it("sin usuario de solo lectura no intenta SQL", async () => {
+    urlLectura.mockReturnValue(null);
+    query.mockResolvedValue({ rows: [fila("7", "Total: 13,55 EUR")] });
+    respuestaModelo("13,55 EUR [1]");
+
+    const r = await responder([{ rol: "usuario", texto: "¿Cuánto he gastado?" }]);
+
+    expect(planificar).not.toHaveBeenCalled();
+    expect(ejecutarSQL).not.toHaveBeenCalled();
+    expect(r.modo).toBe("semantica");
   });
 
   it("un error del modelo al redactar no vuelve a generar la consulta", async () => {

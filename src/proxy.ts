@@ -1,46 +1,54 @@
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  COOKIE_SESION,
+  credencialesConfiguradas,
+  credencialesValidas,
+  sesionValida,
+} from "@/lib/sesion";
 
-/** Compara sin salir antes de tiempo, para no revelar cuántos caracteres coinciden. */
-function iguales(a: string, b: string): boolean {
-  let diferencia = a.length ^ b.length;
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    diferencia |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
-  }
-  return diferencia === 0;
-}
+// Accesibles sin sesión: la propia página de acceso y su API
+const PUBLICAS = ["/login", "/api/login"];
 
-function credenciales(request: NextRequest): [string, string] | null {
+/** Credenciales HTTP Basic, para usar la API desde scripts o curl. */
+function basicValida(request: NextRequest): boolean {
   const cabecera = request.headers.get("authorization");
-  if (!cabecera?.startsWith("Basic ")) return null;
+  if (!cabecera?.startsWith("Basic ")) return false;
   try {
     const texto = atob(cabecera.slice(6));
     const separador = texto.indexOf(":");
-    if (separador === -1) return null;
-    return [texto.slice(0, separador), texto.slice(separador + 1)];
+    return (
+      separador !== -1 &&
+      credencialesValidas(texto.slice(0, separador), texto.slice(separador + 1))
+    );
   } catch {
-    return null;
+    return false;
   }
 }
 
 /**
- * Protege toda la app (páginas y API) con usuario y contraseña del navegador
- * (HTTP Basic). Se activa al definir AUTH_PASSWORD; sin ella la app queda abierta,
- * como en desarrollo local.
+ * Protege toda la app (páginas y API) cuando se define AUTH_PASSWORD; sin ella
+ * queda abierta, como en desarrollo local. En el navegador se entra por /login
+ * (cookie de sesión firmada); desde scripts vale también HTTP Basic.
  */
 export function proxy(request: NextRequest) {
-  const password = process.env.AUTH_PASSWORD;
-  if (!password) return NextResponse.next();
+  if (!credencialesConfiguradas()) return NextResponse.next();
 
-  const usuario = process.env.AUTH_USER || "admin";
-  const recibidas = credenciales(request);
-  if (recibidas && iguales(recibidas[0], usuario) && iguales(recibidas[1], password)) {
+  const { pathname, search } = request.nextUrl;
+  if (PUBLICAS.includes(pathname)) return NextResponse.next();
+
+  if (
+    sesionValida(request.cookies.get(COOKIE_SESION)?.value) ||
+    basicValida(request)
+  ) {
     return NextResponse.next();
   }
 
-  return new NextResponse("Se necesita usuario y contraseña", {
-    status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="Extracto", charset="UTF-8"' },
-  });
+  if (pathname.startsWith("/api/")) {
+    return Response.json({ error: "Inicia sesión para continuar" }, { status: 401 });
+  }
+  // Relativa, por el mismo motivo que en /api/login
+  const destino = pathname === "/" ? "" : `?${new URLSearchParams({ next: pathname + search })}`;
+  return new NextResponse(null, { status: 307, headers: { Location: `/login${destino}` } });
 }
 
 export const config = {

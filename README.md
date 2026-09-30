@@ -108,3 +108,4 @@ Variables de entorno:
 | `AUTH_PASSWORD`, `AUTH_USER` | Protegen toda la app con usuario y contraseña (HTTP Basic). Sin `AUTH_PASSWORD` la app queda abierta |
 | `LECTOR_PASSWORD` | Contraseña del usuario lector que usa el chat para el SQL |
 | `OPENROUTER_MODEL` | Opcional, modelo a usar |
+| `DATABASE_CA_FILE`, `DATABASE_TLS_SERVERNAME` | TLS verificado con una CA propia. En seenode: `/usr/src/app/db/seenode-ca.pem` (la CA de UpCloud del servidor de base de datos) y el nombre del certificado, porque el host de seenode es un alias |

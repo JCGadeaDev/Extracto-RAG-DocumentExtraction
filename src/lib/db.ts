@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { checkServerIdentity, type ConnectionOptions } from "node:tls";
 import { Pool, types } from "pg";
 
 const globalForPg = globalThis as unknown as {
@@ -5,9 +7,30 @@ const globalForPg = globalThis as unknown as {
   pgPoolLectura?: Pool;
 };
 
+/**
+ * TLS verificado contra una CA concreta (DATABASE_CA_FILE), para bases de datos
+ * gestionadas con CA propia. DATABASE_TLS_SERVERNAME es el nombre que figura en
+ * el certificado cuando el host de conexión es un alias (CNAME) de él. Sin
+ * DATABASE_CA_FILE se usa la configuración de siempre (PGSSLMODE o la URL).
+ * Duplicado en scripts/migrate.mjs.
+ */
+export function configuracionSsl(): ConnectionOptions | undefined {
+  const archivo = process.env.DATABASE_CA_FILE;
+  if (!archivo) return undefined;
+
+  const nombre = process.env.DATABASE_TLS_SERVERNAME;
+  return {
+    ca: readFileSync(archivo, "utf8"),
+    rejectUnauthorized: true,
+    ...(nombre && {
+      checkServerIdentity: (_host: string, cert) => checkServerIdentity(nombre, cert),
+    }),
+  };
+}
+
 export const pool =
   globalForPg.pgPool ??
-  new Pool({ connectionString: process.env.DATABASE_URL });
+  new Pool({ connectionString: process.env.DATABASE_URL, ssl: configuracionSsl() });
 
 if (process.env.NODE_ENV !== "production") globalForPg.pgPool = pool;
 
@@ -45,6 +68,7 @@ export function poolLectura(): Pool {
 
   globalForPg.pgPoolLectura = new Pool({
     connectionString,
+    ssl: configuracionSsl(),
     max: 3,
     // Las fechas se devuelven tal cual ("2026-09-15"), sin convertirlas a Date
     // con la zona horaria del servidor

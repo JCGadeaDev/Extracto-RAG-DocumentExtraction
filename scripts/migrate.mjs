@@ -6,7 +6,22 @@
 // (opcional; por defecto "<base de datos>_lector", porque en un servidor
 // compartido los nombres de rol son globales).
 import { readFileSync } from "node:fs";
+import { checkServerIdentity } from "node:tls";
 import pg from "pg";
+
+// TLS con CA propia; igual que configuracionSsl() en src/lib/db.ts
+function configuracionSsl() {
+  const archivo = process.env.DATABASE_CA_FILE;
+  if (!archivo) return undefined;
+  const nombre = process.env.DATABASE_TLS_SERVERNAME;
+  return {
+    ca: readFileSync(archivo, "utf8"),
+    rejectUnauthorized: true,
+    ...(nombre && {
+      checkServerIdentity: (_host, cert) => checkServerIdentity(nombre, cert),
+    }),
+  };
+}
 
 // La parte del usuario lector de init.sql usa un nombre y una contraseña fijos,
 // pensados para desarrollo; aquí se sustituye por la versión configurable.
@@ -61,7 +76,7 @@ if (!url) {
 const sql = readFileSync(new URL("../db/init.sql", import.meta.url), "utf8");
 const esquema = sql.split(MARCA_LECTOR)[0];
 
-const client = new pg.Client({ connectionString: url });
+const client = new pg.Client({ connectionString: url, ssl: configuracionSsl() });
 await client.connect();
 try {
   await client.query(esquema);

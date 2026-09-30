@@ -29,7 +29,7 @@ describe("POST /api/login", () => {
     const res = await entrar({ usuario: "admin", password: "secreto", next: "/documentos" });
 
     expect(res.status).toBe(303);
-    expect(res.headers.get("Location")).toBe("/documentos");
+    expect(res.headers.get("Location")).toBe("http://interno:3000/documentos");
     const valor = cookieDe(res).match(new RegExp(`${COOKIE_SESION}=([^;]+)`))![1];
     expect(sesionValida(valor)).toBe(true);
     expect(cookieDe(res)).toMatch(/HttpOnly/i);
@@ -44,21 +44,26 @@ describe("POST /api/login", () => {
     expect(cookieDe(res)).toMatch(/Secure/i);
   });
 
-  it("redirige de forma relativa, sin el host ni el puerto internos", async () => {
-    const res = await entrar({ usuario: "admin", password: "secreto" });
-    expect(res.headers.get("Location")).toBe("/");
+  it("redirige al host público, no al interno del contenedor", async () => {
+    const res = await entrar(
+      { usuario: "admin", password: "secreto" },
+      { "x-forwarded-proto": "https", "x-forwarded-host": "app.example.com" },
+    );
+    expect(res.headers.get("Location")).toBe("https://app.example.com/");
   });
 
   it("con credenciales incorrectas vuelve a /login con error y sin cookie", async () => {
     const res = await entrar({ usuario: "admin", password: "mal", next: "/documentos" });
 
-    expect(res.headers.get("Location")).toBe("/login?error=1&next=%2Fdocumentos");
+    expect(res.headers.get("Location")).toBe(
+      "http://interno:3000/login?error=1&next=%2Fdocumentos",
+    );
     expect(cookieDe(res)).toBe("");
   });
 
   it("no redirige a otros sitios", async () => {
     const res = await entrar({ usuario: "admin", password: "secreto", next: "//evil.com" });
-    expect(res.headers.get("Location")).toBe("/");
+    expect(res.headers.get("Location")).toBe("http://interno:3000/");
   });
 });
 

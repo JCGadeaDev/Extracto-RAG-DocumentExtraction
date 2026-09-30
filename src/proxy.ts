@@ -5,6 +5,7 @@ import {
   credencialesValidas,
   sesionValida,
 } from "@/lib/sesion";
+import { urlPublica } from "@/lib/url-publica";
 
 // Accesibles sin sesión: la propia página de acceso y su API
 const PUBLICAS = ["/login", "/api/login"];
@@ -46,9 +47,9 @@ export function proxy(request: NextRequest) {
   if (pathname.startsWith("/api/")) {
     return Response.json({ error: "Inicia sesión para continuar" }, { status: 401 });
   }
-  // Relativa, por el mismo motivo que en /api/login
-  const destino = pathname === "/" ? "" : `?${new URLSearchParams({ next: pathname + search })}`;
-  return new NextResponse(null, { status: 307, headers: { Location: `/login${destino}` } });
+  const login = urlPublica(request, "/login");
+  if (pathname !== "/") login.searchParams.set("next", pathname + search);
+  return NextResponse.redirect(login);
 }
 
 export const config = {

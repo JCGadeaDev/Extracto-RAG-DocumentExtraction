@@ -31,13 +31,19 @@ describe("con AUTH_PASSWORD", () => {
     const res = pedir("/");
 
     expect(res.status).toBe(307);
-    expect(res.headers.get("Location")).toBe("/login");
+    expect(res.headers.get("Location")).toBe("http://test/login");
   });
 
   it("recuerda la página pedida para volver tras entrar", () => {
     const res = pedir("/documentos?x=1");
 
-    expect(res.headers.get("Location")).toBe("/login?next=%2Fdocumentos%3Fx%3D1");
+    expect(res.headers.get("Location")).toBe("http://test/login?next=%2Fdocumentos%3Fx%3D1");
+  });
+
+  it("redirige al host y protocolo públicos detrás de un balanceador", () => {
+    const res = pedir("/", { "x-forwarded-proto": "https", "x-forwarded-host": "app.example.com" });
+
+    expect(res.headers.get("Location")).toBe("https://app.example.com/login");
   });
 
   it("responde 401 en la API, sin redirigir", async () => {

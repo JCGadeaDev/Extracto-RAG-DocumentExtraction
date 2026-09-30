@@ -6,16 +6,11 @@ import {
   credencialesValidas,
   destinoSeguro,
 } from "@/lib/sesion";
+import { esHttps, urlPublica } from "@/lib/url-publica";
 
-// Redirección relativa: detrás del balanceador request.url es http y con el
-// puerto interno. 303 hace que el navegador pase a GET tras el POST.
-function redirigir(ruta: string) {
-  return new NextResponse(null, { status: 303, headers: { Location: ruta } });
-}
-
-function esHttps(request: Request): boolean {
-  const reenviado = request.headers.get("x-forwarded-proto")?.split(",")[0].trim();
-  return (reenviado ?? new URL(request.url).protocol.replace(":", "")) === "https";
+// 303: el navegador pasa a GET tras el POST del formulario
+function redirigir(request: Request, ruta: string) {
+  return NextResponse.redirect(urlPublica(request, ruta), 303);
 }
 
 /** Recibe el formulario de /login y abre la sesión. */
@@ -28,10 +23,10 @@ export async function POST(request: Request) {
   if (!credencialesValidas(usuario, password)) {
     const params = new URLSearchParams({ error: "1" });
     if (next !== "/") params.set("next", next);
-    return redirigir(`/login?${params}`);
+    return redirigir(request, `/login?${params}`);
   }
 
-  const res = redirigir(next);
+  const res = redirigir(request, next);
   res.cookies.set(COOKIE_SESION, crearSesion(), {
     httpOnly: true,
     secure: esHttps(request),

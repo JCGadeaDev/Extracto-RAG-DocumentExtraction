@@ -89,3 +89,22 @@ npm run dev               # usa DATABASE_URL de .env.local
 ```
 
 App en http://localhost:3000.
+
+## Despliegue (seenode u otro PaaS con Node 22)
+
+- **Build:** `npm ci && npm run build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public`
+- **Arranque:** `node scripts/migrate.mjs && HOSTNAME=0.0.0.0 PORT=3000 node .next/standalone/server.js`
+
+`scripts/migrate.mjs` aplica `db/init.sql` en cada arranque (es idempotente) y crea el usuario
+de solo lectura `<base de datos>_lector` con `LECTOR_PASSWORD`. La base de datos necesita la
+extensión pgvector.
+
+Variables de entorno:
+
+| Variable | Para qué |
+|---|---|
+| `DATABASE_URL` | Conexión a PostgreSQL (en seenode la pone "link database") |
+| `OPENROUTER_API_KEY` | Clave de OpenRouter (secreta) |
+| `AUTH_PASSWORD`, `AUTH_USER` | Protegen toda la app con usuario y contraseña (HTTP Basic). Sin `AUTH_PASSWORD` la app queda abierta |
+| `LECTOR_PASSWORD` | Contraseña del usuario lector que usa el chat para el SQL |
+| `OPENROUTER_MODEL` | Opcional, modelo a usar |

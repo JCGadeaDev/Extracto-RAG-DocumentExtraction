@@ -23,6 +23,8 @@
 # misc
 .DS_Store
 *.pem
+# Certificado público de la CA de la base de datos de seenode (no es una clave)
+!db/seenode-ca.pem
 
 # debug
 npm-debug.log*

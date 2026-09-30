@@ -1,6 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
+import { Boton } from "./ui";
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -11,11 +13,9 @@ export default function LogoutButton() {
   }
 
   return (
-    <button
-      onClick={salir}
-      className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
-    >
-      Salir
-    </button>
+    <Boton variante="fantasma" tamano="sm" onClick={salir}>
+      <LogOut aria-hidden />
+      <span className="max-sm:sr-only">Salir</span>
+    </Boton>
   );
 }

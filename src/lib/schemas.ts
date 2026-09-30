@@ -28,9 +28,27 @@ const impuesto = z.object({
   importe: importe,
 });
 
+/** Importe en formato español, con su moneda cuando es un código ISO válido. */
+function cifra(n: number, moneda?: unknown) {
+  const opciones = { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: "always" } as const;
+  if (typeof moneda === "string" && /^[A-Z]{3}$/.test(moneda)) {
+    try {
+      return n.toLocaleString("es-ES", { ...opciones, style: "currency", currency: moneda });
+    } catch {
+      // Código con forma ISO pero desconocido: se muestra sin moneda
+    }
+  }
+  return n.toLocaleString("es-ES", opciones);
+}
+
+/** Qué no cuadra, con las dos cifras y cómo arreglarlo. */
+function mensajeTotal(total: number, esperado: number, moneda?: unknown) {
+  return `El total (${cifra(total, moneda)}) no coincide con subtotal + impuestos (${cifra(esperado, moneda)}). Corrige el total o el desglose.`;
+}
+
 /** subtotal + impuestos debe cuadrar con el total. */
 function comprobarTotal(
-  d: { subtotal?: number; impuestos?: { importe: number }[]; total: number },
+  d: { subtotal?: number; impuestos?: { importe: number }[]; total: number; moneda?: string },
   ctx: z.RefinementCtx,
 ) {
   if (typeof d.subtotal !== "number") return;
@@ -40,7 +58,7 @@ function comprobarTotal(
     ctx.addIssue({
       code: "custom",
       path: ["total"],
-      message: `No cuadra: subtotal + impuestos = ${esperado.toFixed(2)}`,
+      message: mensajeTotal(d.total, esperado, d.moneda),
     });
   }
 }
@@ -149,7 +167,8 @@ export function camposEsperados(tipo: Tipo): string[] {
  * la cuadratura de importes se comprueba también por separado.
  */
 function issueDeTotales(datos: Record<string, unknown>): string | undefined {
-  const { subtotal, total, impuestos } = datos as {
+  const { subtotal, total, impuestos, moneda } = datos as {
+    moneda?: unknown;
     subtotal?: unknown;
     total?: unknown;
     impuestos?: unknown;
@@ -166,7 +185,7 @@ function issueDeTotales(datos: Record<string, unknown>): string | undefined {
     : 0;
   const esperado = subtotal + suma;
   if (Math.abs(esperado - total) > TOLERANCIA) {
-    return `No cuadra: subtotal + impuestos = ${esperado.toFixed(2)}`;
+    return mensajeTotal(total, esperado, moneda);
   }
 }
 

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Herramientas de Claude Code (Impeccable), no son código de la app
+    ".claude/**",
   ]),
 ]);
 

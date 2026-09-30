@@ -42,3 +42,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Capturas de la revisión de diseño (Impeccable)
+/.impeccable/review/
+/.impeccable/mocks/
+/.impeccable/questions/
+/.impeccable/hook.cache.json
+
+# Skills y agentes de Claude Code instalados localmente (incluyen binarios)
+/.claude/

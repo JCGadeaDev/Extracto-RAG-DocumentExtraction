@@ -85,7 +85,7 @@ describe("confirmación rechazada", () => {
     });
 
     expect(res.status).toBe(422);
-    expect((await res.json()).issues["datos.total"]).toMatch(/No cuadra/);
+    expect((await res.json()).issues["datos.total"]).toMatch(/no coincide con subtotal/);
     expect(guardarConfirmado).not.toHaveBeenCalled();
   });
 

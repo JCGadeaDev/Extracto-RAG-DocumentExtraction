@@ -64,7 +64,7 @@ describe("factura", () => {
   it("detecta que subtotal + impuestos no cuadra con el total", () => {
     const issues = validarExtraccion(conDatos(facturaValida, { total: 99 }));
     expect(issues["datos.total"]).toBe(
-      "No cuadra: subtotal + impuestos = 13.55",
+      "El total (99,00 €) no coincide con subtotal + impuestos (13,55 €). Corrige el total o el desglose.",
     );
   });
 
@@ -76,7 +76,7 @@ describe("factura", () => {
   it("detecta el descuadre aunque falten otros campos", () => {
     const rota = conDatos(sinCampo(facturaValida, "numero"), { total: 50 });
     const issues = validarExtraccion(rota);
-    expect(issues["datos.total"]).toMatch(/No cuadra/);
+    expect(issues["datos.total"]).toMatch(/no coincide con subtotal/);
     expect(issues["datos.numero"]).toBe("Falta este campo obligatorio");
   });
 
@@ -118,7 +118,7 @@ describe("recibo", () => {
 
   it("también comprueba que los importes cuadren", () => {
     const issues = validarExtraccion(conDatos(reciboValido, { total: 10 }));
-    expect(issues["datos.total"]).toMatch(/No cuadra/);
+    expect(issues["datos.total"]).toMatch(/no coincide con subtotal/);
   });
 
   it("no exige número de recibo", () => {

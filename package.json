@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "migrate": "node scripts/migrate.mjs"
   },
   "dependencies": {
     "@napi-rs/canvas": "^1.0.9",
